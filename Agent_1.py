@@ -18,8 +18,6 @@ weight_decay_Q = 1e-6
 
 class Agent():
     def __init__(self,state_size,action_size,seed,num_agents):
-       
-        
         self.num_agents = num_agents
         self.state_size = state_size
         self.action_size = action_size
@@ -54,30 +52,35 @@ class Agent():
         with torch.no_grad():            
             #cuda tensors cannot be converted to numpy
             #for i in range(self.num_agents):
-            actions = self.actor_local(state).cpu().data.numpy()
+            action = self.actor_local(state).cpu().data.numpy()
         #set back to training mode
         self.actor_local.train()
-        
         #add OUNoise to action to aid exploration
         for i in range(self.num_agents):
-               actions[i]+=self.noise.sample()
-        return np.clip(actions,-1,1)
+               action[i]+=self.noise.sample()
+        return np.clip(action,-1,1)
    
        
-    def step(self):
+    def step(self,t):
         #Add s,a,r,s tuple to memory 
         #if replay memory has batch_size experiences, then learn
         if len(self.memory)> BATCH_SIZE:
-            self.learn(self.memory.sample())
+            if t%20 == 0:
+                for _ in range(0,10):
+                    self.learn(self.memory.sample())
+            else:
+                pass
+           
                      
     def learn(self,experience):
+        global GAMMA,TAU
         #Extract sars from experience
         state,action,reward,next_state,done = experience
         ####update critic first#####
         #get next action
         next_action_target = self.actor_target(next_state)
         #calculate actual Q value
-        Q_actual = reward + GAMMA*(self.critic_target(next_state,next_action_target)*(1-done))
+        Q_actual = reward + (GAMMA*self.critic_target(next_state,next_action_target)*(1-done))
         
         #calculate expected Q value
         Q_expected = self.critic_local(state,action)
@@ -97,18 +100,20 @@ class Agent():
         #Clip grad (Attempt #2)
         torch.nn.utils.clip_grad_norm_(self.actor_local.parameters(),1)
         self.actor_optimizer.step()
+
+        self.soft_update(self.critic_local, self.critic_target,TAU)
+        self.soft_update(self.actor_local, self.actor_target,TAU)                     
+
         
-        self.soft_update(self.actor_target,self.actor_local)
-        self.soft_update(self.critic_target,self.critic_local)
          
     
     def reset(self):
         self.noise.reset()
     
-    def soft_update(self,target,local):
-        for target_param, local_param in zip(target.parameters(),local.parameters()):
-            target_param.data.copy_(TAU*local_param.data + (1.0-TAU)*target_param.data)
-            
+    def soft_update(self, local_model, target_model,TAU=1.0):
+        #global TAU
+        for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
+            target_param.data.copy_(TAU*local_param.data + (1.0-TAU)*target_param.data)        
         
 class ReplayBuffer():
     def __init__(self,action_size,buffer_size,batch_size,seed):
@@ -153,6 +158,6 @@ class OUNoise:
     def sample(self):
         """Update internal state and return it as a noise sample."""
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.array([random.random() for i in range(len(x))])
+        dx = self.theta * (self.mu - x) + self.sigma * np.array([random.gauss(0.0,1.0) for i in range(len(x))])
         self.state = x + dx
         return self.state
