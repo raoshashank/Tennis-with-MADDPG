@@ -15,7 +15,7 @@ class Actor(nn.Module):
         super(Actor,self).__init__()
         
         #hidden unit layer as given in paper
-        fc_units = [400,300]
+        fc_units = [256,128]
         
         self.seed = torch.manual_seed(seed)
         self.state_size = state_size
@@ -47,14 +47,14 @@ class Critic(nn.Module):
         super(Critic,self).__init__()
         
         #hidden unit layer as given in paper
-        fc_units = [400,300]
+        fc_units = [256,128]
         
         self.seed = torch.manual_seed(seed)
         self.state_size = state_size
         self.action_size = action_size
-        
-        self.fc1 = nn.Linear(state_size,fc_units[0])
-        self.fc2 = nn.Linear(fc_units[0]+action_size,fc_units[1])
+        input_size = 52
+        self.fc1 = nn.Linear(input_size,fc_units[0])
+        self.fc2 = nn.Linear(fc_units[0],fc_units[1])
         self.fc3 = nn.Linear(fc_units[1],1)
         self.reset_parameters()
     
@@ -68,10 +68,15 @@ class Critic(nn.Module):
         
         
     def forward(self,state,actions):
-        x = F.relu(self.fc1(state))
-        x = torch.cat((x,actions),dim=1)
+        #print(np.shape(state))
+        #print(np.shape(actions))
+        #print(actions)
+        #a = input()
+        x = torch.cat((state,actions),dim=1)
+        x = F.relu(self.fc1(x))
         x=F.relu(self.fc2(x))
         return self.fc3(x)
         
+
     
     
