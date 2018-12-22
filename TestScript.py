@@ -36,6 +36,34 @@ agents = []
 [agents.append(Agent(state_size = state_size, action_size = action_size,seed = i)) for i in range(num_agents)]
 
 RANDOM_EPISODES = 300
+agents[0].actor_local.load_state_dict(torch.load('checkpoint_actor_1_last.pth',map_location = 'cpu'))
+agents[0].critic_local.load_state_dict(torch.load('checkpoint_critic_1_last.pth',map_location = 'cpu'))
+agents[1].actor_target.load_state_dict(torch.load('checkpoint_actor_2_last.pth',map_location = 'cpu'))
+agents[1].critic_target.load_state_dict(torch.load('checkpoint_critic_2_last.pth',map_location = 'cpu'))
+
+x = input()
+
+for _ in range(1):
+    env_info = env.reset(train_mode = False)[brain_name]
+    states = env_info.vector_observations      
+    [agents[i].reset() for i in range(num_agents)]
+
+    for t in range(1000):
+            actions=np.zeros([1,num_agents*action_size])
+            actions = np.clip(np.random.random([1,4]),-1,1)
+            env_info_ = env.step(actions)[brain_name]
+            next_states = env_info_.vector_observations
+            rewards = env_info_.rewards
+            dones = env_info_.local_done 
+            #add all the experience to common replay buffer (Attempt #1)
+            #for i in range(0,num_agents):
+            states=next_states
+            if np.any(dones):
+                break
+
+
+
+
 for _ in range(RANDOM_EPISODES):
     env_info = env.reset(train_mode = False)[brain_name]
     states = env_info.vector_observations      
@@ -43,7 +71,7 @@ for _ in range(RANDOM_EPISODES):
 
     for t in range(1000):
             actions=np.zeros([1,num_agents*action_size])
-            actions =np.concatenate([agents[i].act(states[i]) for i in range(2)], axis = 0)
+            actions =np.concatenate([agents[i].act(states[i],ADD_NOISE = False) for i in range(2)], axis = 0)
             env_info_ = env.step(actions)[brain_name]
             next_states = env_info_.vector_observations
             states=next_states

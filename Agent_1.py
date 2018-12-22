@@ -53,7 +53,7 @@ class Agent():
         #Add experience to Replay Buffer
          self.memory.add(states,actions,rewards,next_states,dones)
      
-    def act(self,state):
+    def act(self,state,ADD_NOISE = True):
         #forward pass on actor network and get action
         state = torch.from_numpy(state).float().to(device)
         #for forward pass without training, set to eval mode
@@ -67,7 +67,8 @@ class Agent():
         self.actor_local.train()
         #add OUNoise to action to aid exploration
         #for i in range(self.num_agents):
-        action+=self.noise.sample()
+        if ADD_NOISE:
+            action+=self.noise.sample()
         #action += self.epsilon*0.5*np.random.randn(1,2)
         #self.epsilon = max(self.epsilon_min,self.epsilon*self.epsilon_decay)
             
