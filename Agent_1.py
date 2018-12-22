@@ -10,10 +10,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 ###Hyper parameters as given in Paper####
 GAMMA = 0.99
-TAU   = 0.06
-BATCH_SIZE= 128
+TAU   = 0.2
+BATCH_SIZE= 1024
 BUFFER_SIZE= int(1e6)
-weight_decay_Q = 1e-6
+weight_decay_Q = 0
+LR_ACTOR = 1e-4
+LR_CRITIC = 1e-3
 ##########################################
 
 class Agent():
@@ -21,7 +23,8 @@ class Agent():
 
         self.state_size = state_size #24
         self.action_size = action_size #2
-        self.seed = random.seed(seed)
+        self.seed = 2
+        self.BATCH_SIZE = BATCH_SIZE
         c_input = (state_size+action_size)*2 #52
         c_output = 1
 
@@ -34,18 +37,23 @@ class Agent():
         self.critic_target = Critic(c_input,c_output,seed).to(device)
         
         #Learning rates as given in the paper 
-        self.actor_optimizer =torch.optim.Adam(self.actor_local.parameters(),lr=1e-4) 
-        self.critic_optimizer=torch.optim.Adam(self.critic_local.parameters(),lr=1e-3,weight_decay = weight_decay_Q)
+        self.actor_optimizer =torch.optim.Adam(self.actor_local.parameters(),lr=LR_ACTOR) 
+        self.critic_optimizer=torch.optim.Adam(self.critic_local.parameters(),lr=LR_CRITIC,weight_decay = weight_decay_Q)
         
         self.memory = ReplayBuffer(action_size,BUFFER_SIZE,BATCH_SIZE,seed)
         
         self.noise = OUNoise(action_size,seed)
+        
+        self.epsilon_start = 1.0
+        self.epsilon_decay = 0.99
+        self.epsilon_min = 0.1
+        self.epsilon = self.epsilon_start
     
     def add_experience(self,states,actions,rewards,next_states,dones):
         #Add experience to Replay Buffer
          self.memory.add(states,actions,rewards,next_states,dones)
      
-    def act(self,state,noise=0):
+    def act(self,state):
         #forward pass on actor network and get action
         state = torch.from_numpy(state).float().to(device)
         #for forward pass without training, set to eval mode
@@ -60,6 +68,9 @@ class Agent():
         #add OUNoise to action to aid exploration
         #for i in range(self.num_agents):
         action+=self.noise.sample()
+        #action += self.epsilon*0.5*np.random.randn(1,2)
+        #self.epsilon = max(self.epsilon_min,self.epsilon*self.epsilon_decay)
+            
         return np.clip(action,-1,1)
    
     '''   
@@ -72,7 +83,7 @@ class Agent():
                 pass
     '''    
                      
-    def learn(self,actors_target,experience,index):
+    def learn(self,actors_target,actors_local,experience,index):
         global GAMMA,TAU
         num_agents = 2
         #Extract sars from experience
@@ -98,22 +109,26 @@ class Agent():
             
             next_action_local = self.actor_local(state[:,0:24])
             next_action_local = torch.cat((next_action_local,action[:,2:]),dim=1)
-
+            #next_action_local = torch.cat((next_action_local,actors_local[1](state[:,24:48])),dim=1)
+            
             next_action_target = self.actor_target(next_state[:,0:24])
             next_action_target = torch.cat((next_action_target,action[:,2:]),dim=1)
+            #next_action_target = torch.cat((next_action_target,actors_target[1](next_state[:,24:48])),dim=1)
 
         else:
             
             next_action_local = self.actor_local(state[:,24:48])
             next_action_local = torch.cat((action[:,:2],next_action_local),dim=1)
+            #next_action_local = torch.cat((actors_local[0](state[:,0:24]),next_action_local),dim=1)
 
             next_action_target = self.actor_target(next_state[:,24:48])
-            next_action_target = torch.cat((action[:,:2],next_action_target),dim=1)     
+            next_action_target = torch.cat((action[:,:2],next_action_target),dim=1)
+            #next_action_target = torch.cat((actors_target[0](next_state[:,0:24]),next_action_target),dim=1)
 
         #print(np.shape(next_action_target))
         #a = input()
         #[next_action_target.append() for i in range(num_agents)]
-        #calculate actual Q value
+            #calculate actual Q value
         #print('\n')
         #print(np.shape(actors_target[0](state[0])))
         #print(np.shape(next_action_target))
@@ -136,24 +151,19 @@ class Agent():
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
         #Clip grad (Attempt #2)
-        torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(),1)
+        torch.nn.utils.clip_grad_norm_(self.critic_local.parameters(),1.0)
         self.critic_optimizer.step()
 
         ###update actor next#####
-        if index == 0 :
-            this_state = state[:,0:24]
-        else:
-            this_state = state[:,24:]
-
         actor_loss = -self.critic_local(state,next_action_local).mean()
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         #Clip grad (Attempt #2)
-        torch.nn.utils.clip_grad_norm_(self.actor_local.parameters(),1)
+        torch.nn.utils.clip_grad_norm_(self.actor_local.parameters(),1.0)
         self.actor_optimizer.step()
 
-        self.soft_update(self.critic_local, self.critic_target,TAU)
-        self.soft_update(self.actor_local, self.actor_target,TAU)                     
+        self.soft_update(self.critic_local, self.critic_target)
+        self.soft_update(self.actor_local, self.actor_target)                     
 
         
          
@@ -161,7 +171,7 @@ class Agent():
     def reset(self):
         self.noise.reset()
     
-    def soft_update(self, local_model, target_model,TAU=1.0):
+    def soft_update(self, local_model, target_model):
         #global TAUactors_target[i](state[i])
         for target_param, local_param in zip(target_model.parameters(), local_model.parameters()):
             target_param.data.copy_(TAU*local_param.data + (1.0-TAU)*target_param.data)        

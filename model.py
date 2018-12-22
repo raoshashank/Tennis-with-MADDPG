@@ -36,9 +36,13 @@ class Actor(nn.Module):
         
         
     def forward(self,state):
-        x = F.relu(self.fc1(state))
-        x = F.relu(self.fc2(x))
+        #x = F.relu(self.fc1(state))
+        #x = F.relu(self.fc2(x))
+        #return F.tanh(self.fc3(x))
+        x = F.elu(self.fc1(state))
+        x = F.elu(self.fc2(x))
         return F.tanh(self.fc3(x))
+    
     
     
 class Critic(nn.Module):
@@ -52,8 +56,11 @@ class Critic(nn.Module):
         self.seed = torch.manual_seed(seed)
         self.state_size = state_size
         self.action_size = action_size
-        input_size = 52
-        self.fc1 = nn.Linear(input_size,fc_units[0])
+        state_size =48
+        action_size= 4
+        #self.fc1 = nn.Linear(state_size,fc_units[0])
+        #self.fc2 = nn.Linear(fc_units[0]+action_size,fc_units[1])
+        self.fc1 = nn.Linear(state_size+action_size,fc_units[0])
         self.fc2 = nn.Linear(fc_units[0],fc_units[1])
         self.fc3 = nn.Linear(fc_units[1],1)
         self.reset_parameters()
@@ -74,6 +81,7 @@ class Critic(nn.Module):
         #a = input()
         x = torch.cat((state,actions),dim=1)
         x = F.relu(self.fc1(x))
+        #x = torch.cat((x,actions),dim=1)
         x=F.relu(self.fc2(x))
         return self.fc3(x)
         
