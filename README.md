@@ -16,7 +16,7 @@ In this environment, two agents control rackets to bounce a ball over a net. If 
 
 The observation space consists of 8 variables corresponding to the position and velocity of the ball and racket. Each agent receives its own, local observation.  Two continuous actions are available, corresponding to movement toward (or away from) the net, and jumping. 
 
-Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. The task is episodic, and in order to solve the environment, your agents must get an average score of +0.5 (over 100 consecutive episodes, after taking the maximum over both agents). Specifically,
+Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. The task is episodic, and in order to solve the environment, the agents must get an average score of +0.5 (over 100 consecutive episodes, after taking the maximum over both agents). Specifically,
 
 - After each episode, we add up the rewards that each agent received (without discounting), to get a score for each agent. This yields 2 (potentially different) scores. We then take the maximum of these 2 scores.
 - This yields a single **score** for each episode.
@@ -39,5 +39,5 @@ Download the environment from one of the links below.  You need only select the 
 
 In order to just see the learned agent, run the TestScript.py file
 
-In order to train the agent, run the Tennis.py file. Please change the file path of the Tennis environment as required.
+In order to train the agent, run the Tennis.py file. 
 
