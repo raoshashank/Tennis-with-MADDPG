@@ -8,36 +8,48 @@
 
 ### Introduction
 
-For this project, you will work with the [Tennis](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Learning-Environment-Examples.md#tennis) environment.
-
 ![Trained Agent][image1]
 
 In this environment, two agents control rackets to bounce a ball over a net. If an agent hits the ball over the net, it receives a reward of +0.1.  If an agent lets a ball hit the ground or hits the ball out of bounds, it receives a reward of -0.01.  Thus, the goal of each agent is to keep the ball in play.
 
 The observation space consists of 8 variables corresponding to the position and velocity of the ball and racket. Each agent receives its own, local observation.  Two continuous actions are available, corresponding to movement toward (or away from) the net, and jumping. 
 
-Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. Place the file in the DRLND GitHub repository, in the p3_collab-compet/ folder, and unzip (or decompress) the file. The task is episodic, and in order to solve the environment, the agents must get an average score of +0.5 (over 100 consecutive episodes, after taking the maximum over both agents). Specifically,
+Below image shows the final reward progression.
 
-- After each episode, we add up the rewards that each agent received (without discounting), to get a score for each agent. This yields 2 (potentially different) scores. We then take the maximum of these 2 scores.
-- This yields a single **score** for each episode.
+The Environment was solved in 1820 episodes
 
-The environment is considered solved, when the average (over 100 episodes) of those **scores** is at least +0.5.
+### Algorithm:
 
-### Getting Started
+### ![Reward Progression](RewardProgression.png)
 
-Download the environment from one of the links below.  You need only select the environment that matches your operating system:
-- Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis_Linux.zip)
-- Mac OSX: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis.app.zip)
-- Windows (32-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis_Windows_x86.zip)
-- Windows (64-bit): [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis_Windows_x86_64.zip)
+In order to solve this environment, I implemented the Multi-DDPG algorithm. The features implemented are as :
 
-(_For Windows users_) Check out [this link](https://support.microsoft.com/en-us/help/827218/how-to-determine-whether-a-computer-is-running-a-32-bit-version-or-64) if you need help with determining if your computer is running a 32-bit version or 64-bit version of the Windows operating system.
+- Each agent has separate Actors and critics
 
-(_For AWS_) If you'd like to train the agent on AWS (and have not [enabled a virtual screen](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md)), then please use [this link](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P3/Tennis/Tennis_Linux_NoVis.zip) to obtain the "headless" version of the environment.  You will **not** be able to watch the agent without enabling a virtual screen, but you will be able to train the agent.  (_To watch the agent, you should follow the instructions to [enable a virtual screen](https://github.com/Unity-Technologies/ml-agents/blob/master/docs/Training-on-Amazon-Web-Service.md), and then download the environment for the **Linux** operating system above._)
+- Centralised training: Each agent's critic not only takes as input its own actor's actions and states, but also the states and actions of the all the other agents. Since only the actors are used during testing, and the actors only depend on the states of the corresponding actors, the agents are free to learn their own reward structures. The below image [source: https://arxiv.org/abs/1706.02275] shows the basic concept.
 
-### Instructions
+  ![](MADDPG.png)
 
-In order to just see the learned agent, run the TestScript.py file
+- Remaining details with respect to the DDPG algorithm remain more or less the same.
 
-In order to train the agent, run the Tennis.py file. 
+- The Hyperparameters, after tuning (thanks to the very helpful slack members for sharing their progress) where fixed to the following values:
 
+  | Parameter                    | Value     |
+  | ---------------------------- | --------- |
+  | gamma                        | 0.99      |
+  | tau                          | 0.2       |
+  | Batch Size (Buffer)          | 1024      |
+  | Buffer Size                  | 10^6      |
+  | Weight Decay (Critic, Actor) | 0         |
+  | Learning Rate : Actor        | $10^{-4}$ |
+  | Learning Rate : Critic       | $10^{-3}$ |
+
+- The Network Structure for both the Actor and Critic were chosen as:
+  - 1st hidden layer : 256 units
+  - 2nd hidden layer : 128 units
+  - ELU activation was used for actor and ReLu for critic
+- An interesting observation in this project is that the value of tau had a huge impact on the training stability unlike in the previous project
+
+### Future Ideas
+
+It would be interesting to implement Prioritized Experience Replay on this Algorithm. Further, other algorithms such as PPO can be tested for their performance in a multi-agent setting. Also, the above implementation can be extended to the much more complex soccer environment.
